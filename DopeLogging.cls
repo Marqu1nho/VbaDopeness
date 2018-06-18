@@ -21,7 +21,6 @@ Public Enum LogTyp
 End Enum
 Public Sub LogInfo(Typ As LogTyp, RtnNm As String, LogMsg As String)
 Dim FullLine As String
-Dim Arr As New DopeArray
 Dim TimeStamp As String
 Const ErrBeg As String = "Error------------------------------------------------"
 Const ErrEnd As String = "ErrorEnd---------------------------------------------"
@@ -32,7 +31,6 @@ Const ErrEnd As String = "ErrorEnd---------------------------------------------"
     'set timestamp
     TimeStamp = Format(Now, "hh:mm:ss am/pm")
     'concatenate line
-    Arr.AddNew Array(F_LogTyp(Typ), TimeStamp, RtnNm, LogMsg)
     FullLine = Join(Array(F_LogTyp(Typ), TimeStamp, RtnNm, LogMsg), "|")
     'add error line if error
     If Typ = LogTyp.L_Err Then TxtStream.WriteLine ErrBeg
