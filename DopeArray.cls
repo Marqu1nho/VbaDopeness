@@ -22,8 +22,11 @@ Private Sub Class_Initialize()
     Set Arr = Nothing
 End Sub
 Property Get ArrayVals()
-    If Me.IsEmpty Then ArrayVals = Null
-    ArrayVals = Arr
+    If Me.IsEmpty Then
+        ArrayVals = Null
+        Exit Property
+    End If
+    Set ArrayVals = Arr
 End Property
 
 Property Get Count()
