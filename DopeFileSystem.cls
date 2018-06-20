@@ -13,7 +13,7 @@ Public Enum FlDialog
     FldrPicker = msoFileDialogFolderPicker
     FilesPicker = msoFileDialogFilePicker
 End Enum
-Public Function NewFolder(Path As String)
+Public Function NewFolder(Path As String, Optional OpenFldr As Boolean = True)
 Dim FSO As New Scripting.FileSystemObject
 Dim ParentFld As String
 Dim ErrMsg As String
@@ -30,6 +30,7 @@ Dim ErrMsg As String
                 Err.Raise vbObjectError, "DopeFileSystem.NewFolder", ErrMsg
         End Select
     End If
+    If OpenFldr Then Me.NewFileWndw Path
 End Function
 Public Sub NewFileWndw(Path As String)
 Dim FSO As New Scripting.FileSystemObject
@@ -41,18 +42,31 @@ Dim FSO As New Scripting.FileSystemObject
 End Sub
 Public Function GetFileName(ByVal Path As String)
 Dim CutOff As Integer
+    'in case a folder name is passed, get rid of final "\"
+    If Right(Path, 1) = "\" Then Path = Left(Path, Len(Path) - 1)
     'reverse name
     Path = StrReverse(Path)
     'find cutoff of first period
     CutOff = InStr(Path, "\") - 1
     'if period is not found then cutoff will be so we'll raise an error
     Select Case CutOff
-        Case 0
-            GetFileName = Path
-        Case Is > 0
+        Case -1
+            GetFileName = StrReverse(Path)
+        Case Is > -1
             GetFileName = StrReverse(Left(Path, CutOff))
     End Select
 End Function
+Public Sub CopyFile(FromPath As String, ToPath As String, Optional ReplaceTo As Boolean = False)
+Dim FSO As New Scripting.FileSystemObject
+Dim ErrMsg As String
+    'assure that ToPath exists
+    If Not FSO.FileExists(FromPath) Then
+        ErrMsg = "FromPath file doesn't exist."
+        Err.Raise vbObjectError, "DopeFileSystem.CopyFile", ErrMsg
+    End If
+    'move file
+    FSO.CopyFile FromPath, ToPath, overwritefiles:=ReplaceTo
+End Sub
 Public Function GetFileExt(ByVal Path As String)
 Dim CutOff As Integer
     'reverse name
@@ -98,7 +112,7 @@ Dim Arr As New DopeArray
         .Title = BtnNm
         .ButtonName = BtnNm
         .InitialFileName = InitialDir
-        .Filters.Add filterNm, FilterExt
+        '.Filters.Add filterNm, FilterExt
         .Show
     End With
     'capture each file selected
