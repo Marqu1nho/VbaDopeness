@@ -157,7 +157,7 @@ Dim CutOff As Integer
     'if period is not found then cutoff will be so we'll raise an error
     Select Case CutOff
         Case 0
-            Err.Raise vbObjectError, "DopeVersionCtrl.F_GetFileExt", "No file extension found"
+            F_GetFileExt = Null
         Case Is > 0
             F_GetFileExt = StrReverse(Left(Nm, CutOff))
     End Select

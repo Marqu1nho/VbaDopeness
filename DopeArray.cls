@@ -21,12 +21,41 @@ Private Sub Class_Initialize()
 '-------------------------------------------------------------
     Set Arr = Nothing
 End Sub
-Property Get ArrayVals()
+Property Get JoinedVals(Optional JoinChar As String = " ")
+'-------------------------------------------------------------
+'PURPOSE: return a joined string from array values
+'-------------------------------------------------------------
+    If Me.IsEmpty Then
+        JoinedVals = Null
+        Exit Property
+    End If
+    JoinedVals = Join(Arr, JoinChar)
+End Property
+Property Get ArrayVals(Optional Index As Integer)
+'-------------------------------------------------------------
+'PURPOSE: return a joined string from array values
+'-------------------------------------------------------------
+Dim ErrMsg As String
+Dim OutOfScope As Boolean
     If Me.IsEmpty Then
         ArrayVals = Null
         Exit Property
     End If
-    Set ArrayVals = Arr
+    Select Case IsMissing(Index)
+        Case True
+            'return all items
+            ArrayVals = Arr
+        Case False
+            'assure it is within range
+            OutOfScope = (Index + 1) > Me.Count
+            Select Case OutOfScope
+                Case True
+                    ErrMsg = "Max index for data currently in array is " & Me.Count - 1 & "."
+                    Err.Raise vbObjectError, "DopeArray.ArrayVals", ErrMsg
+                Case False
+                    ArrayVals = Arr(Index)
+            End Select
+    End Select
 End Property
 
 Property Get Count()
