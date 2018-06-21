@@ -20,7 +20,7 @@ Private Enum App
     Otl
     Wrd
 End Enum
-Private Enum CurrVrsn
+Public Enum CurrVrsn
     NumOnly
     FullNm
     Icon
@@ -34,21 +34,17 @@ Public Enum ProjDir
     ProjPath
     IconPath
 End Enum
-Private Function F_ToolRepo(Optional WithProjName As Boolean = True)
-Dim ErrMsg As String
-Dim Arr As New DopeArray
-    'add first set of items to array object
-    Arr.AddNew Array(Environ("userprofile"), "Tesla", "Finops Billing - Tool Version Repository")
-    'add project name if necessary
-    If WithProjName Then Arr.AddNew Me.ProjName
-    'return joined string
-    F_ToolRepo = Arr.JoinedVals("\")
-    
-End Function
+
 Private Sub Class_Initialize()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: initiate the application object
+'--------------------------------------------------------------------------------------------------------------------------
     Set AppObj = Application
 End Sub
 Public Property Get ProjName()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: returns project name which excludes any beta tags, the v#.# format as well as the extension
+'--------------------------------------------------------------------------------------------------------------------------
 Dim ErrMsg As String
 Dim Nm As String
     'capture name of project
@@ -63,6 +59,9 @@ Dim Nm As String
     ProjName = Nm
 End Property
 Public Property Get ProjVersion()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: returns the project version which is a combination of the project name as well as as the v#.# format
+'--------------------------------------------------------------------------------------------------------------------------
 Dim Nm As String
     'capture full file name
     Nm = F_GetFileName(ProjNm)
@@ -72,6 +71,10 @@ Dim Nm As String
     ProjVersion = Nm
 End Property
 Public Property Get ProjVersionNum(Optional Vtype As VNum = VNum.AsDouble)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: returns the project version number. By default it'll return as double. But it can alternatively be returned as
+'as string or integer.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim CutOff As Integer
 Dim Nm As Variant
     'capture file name
@@ -100,19 +103,32 @@ Dim Nm As Variant
     ProjVersionNum = Nm
 End Property
 Public Sub OpenProjPath()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Opens to the project folder in the local appdata folder. It uses the DopeFileSystem Object.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim FlSys As New DopeFileSystem
     FlSys.NewFileWndw Me.ProjPaths
 End Sub
 Public Sub OpenRepoPath()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Opens the file repository SharePoint library that the user should have synced on their machine.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim FlSys As New DopeFileSystem
     FlSys.NewFileWndw F_ToolRepo
 End Sub
 Public Property Get ProjExtension()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Returns the file extension
+'--------------------------------------------------------------------------------------------------------------------------
 Dim Nm As String
     'return extension piece of project name
     ProjExtension = F_GetFileExt(F_GetFileName(ProjNm))
 End Property
 Public Sub SetProjLocalFiles()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Set up the project path in the appdata\roaming\ folder. It will create a project folder called
+'BillingTools-ProjectName as well as a sub folder below that called ProjIcon where the icon is housed.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim PathArr As Variant
 Dim Itm As Variant
 Dim FSO As New Scripting.FileSystemObject
@@ -123,7 +139,27 @@ Dim FSO As New Scripting.FileSystemObject
         If Not FSO.FolderExists(Itm) Then FSO.CreateFolder Itm
     Next Itm
 End Sub
+Private Function F_ToolRepo(Optional WithProjName As Boolean = True)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Returns the path of the tool respository. Note that this assumes the user has synced the local one drive storage
+'location. By default it'll return the the name of this project. If false is passed in, it'll only return the repo path.
+'--------------------------------------------------------------------------------------------------------------------------
+Dim ErrMsg As String
+Dim Arr As New DopeArray
+    'add first set of items to array object
+    Arr.AddNew Array(Environ("userprofile"), "Tesla", "Finops Billing - Tool Version Repository")
+    'add project name if necessary
+    If WithProjName Then Arr.AddNew Me.ProjName
+    'return joined string
+    F_ToolRepo = Arr.JoinedVals("\")
+    
+End Function
 Private Sub S_AddShortcutToDesktop(ByVal Path As String, ByVal Icon As String)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Called from S_DownloadNewest. Grabs the icon from the repo folder and replaces the item in the app data icon
+'folder. it will replace it every time there is a new version which will allow us to be able to change the icon and have
+'it update to all the users icons.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim FlSys As New DopeFileSystem
 Dim Dsktp As String
 Dim Flnm As String
@@ -169,23 +205,27 @@ Const IcnFldr As String = "\Desktop\Billing Ops Tools\"
     FlSys.NewFileWndw Dsktp
 End Sub
 Public Property Get ProjPaths(Optional Path As ProjDir = ProjDir.ProjPath)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: set the local project and icon sub folder paths. Then based on the path passed in it will return the project
+'path or the icon sub path.
+'--------------------------------------------------------------------------------------------------------------------------
     'make sure directories are created
     Me.SetProjLocalFiles
     'return path per path variable passed in
     ProjPaths = F_ProjPath(Path)
 End Property
-Public Sub ReinstallCurrent()
-    
-    'see what correct version is
-    Call S_DownloadNewest
-    'download it again
-    
-    'quit
-End Sub
 Public Property Get IsBeta()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Retruns TRUE/FALSE if the state for the version being used is set to BETA or PROD in the version control list.
+'--------------------------------------------------------------------------------------------------------------------------
     IsBeta = DLookup("State", "S_ThisTool", "[Version Num]=" & Me.ProjVersionNum) = "BETA"
 End Property
-Private Property Get CurrVersion(Optional Typ As CurrVrsn = CurrVrsn.NumOnly)
+Public Property Get CurrVersion(Optional Typ As CurrVrsn = CurrVrsn.NumOnly)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Grabs the current PROD version from the vesion control list. By default it will only grab the value from the
+'version num field. But alternatively the full path of the the current version or icon on the SP version repository
+'can be returned.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim Arr As New DopeArray
 Dim VNum As Variant
 Dim Ext As String
@@ -206,12 +246,20 @@ Dim Ext As String
     'return value
     CurrVersion = VNum
 End Property
-
 Public Sub CheckVersion()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: Checks whether the version being used is correct or not. If it is the correct it will clean up any previous
+'versions in the app data folder. If it is not the correct version it will delete the old icon from the desktop, download
+'grab the new version from the SP Tool repository, add the new icon to their desktop, and close its self.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim IsBeta As Boolean
 Dim Msg As Variant
 Dim CurrV As Double
 Dim MyV As Double
+Dim FSO As New Scripting.FileSystemObject
+Dim Fldr As Scripting.Folder
+Dim Fl As Scripting.File
+Dim Nm As String
 Const NoProdVrs As Integer = -1
     'exit if in beta mode
     If Me.IsBeta Then
@@ -246,13 +294,25 @@ Const NoProdVrs As Integer = -1
                     Application.Quit
             End Select
         Case True
+            'clean up previous versions of this project in the app data folder
+            Set Fldr = FSO.GetFolder(Me.ProjPaths)
+            Nm = Me.ProjName
+            For Each Fl In Fldr.Files
+                Debug.Print Fl.Name
+                If Fl.Path = CurrentProject.FullName Or Fl.Name Like "*.laccdb" Then GoTo NextFl
+                If Fl.Name Like Nm & " v#*.*" Then Fl.Delete
+NextFl:
+            Next Fl
             'revert with positive message and exit
-            MsgBox "You are using the current version of this tool - have fun!", vbInformation + vbSystemModal, Me.ProjName
+            MsgBox "You are using the current version of this tool - have fun!", vbInformation + vbSystemModal, Me.ProjVersion
     End Select
     
     
 End Sub
 Private Sub S_DownloadNewest()
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: downloads the newest version from the version repositiory. this is driven by the version control list.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim RepoFile As Variant
 Dim FlSys As New DopeFileSystem
 Dim FromPath As String
@@ -274,6 +334,9 @@ Dim IcoFile As String
     
 End Sub
 Private Function F_ProjPath(Typ As ProjDir)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: returns either the project path or the icon path in the icon local app data folder.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim Proj As String
 Dim Ico As String
     'set project path
@@ -288,6 +351,10 @@ Dim Ico As String
     End Select
 End Function
 Private Sub S_TestVersionPattern(ByVal Nm As String)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: check to assure the project is in correct pattern which consists of "some project name" [space] "v#.#.extension"
+'if it is not in the correct version it will raise an error.
+'--------------------------------------------------------------------------------------------------------------------------
 Const VPattern As String = "* v#*.#*.*"
 Dim ErrMsg As String
     If Not Nm Like VPattern Then
@@ -296,8 +363,10 @@ Dim ErrMsg As String
         Err.Raise vbObjectError, "DopeVersionCtrl.ProjName", ErrMsg
     End If
 End Sub
-
 Private Function F_CleanUpFileNm(ByVal Nm As String)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE:
+'--------------------------------------------------------------------------------------------------------------------------
 Const BetaPattern As String = "*BETA v#*.#*"
     'remove extension
     Nm = Replace(Nm, F_GetFileExt(Nm), vbNullString)
@@ -307,6 +376,10 @@ Const BetaPattern As String = "*BETA v#*.#*"
     F_CleanUpFileNm = Nm
 End Function
 Private Function F_GetFileExt(ByVal Nm As String)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: retuns file extesnion by looking at the string after the last period. if a period is not found then null
+'is returned.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim CutOff As Integer
     'reverse name
     Nm = StrReverse(Nm)
@@ -321,6 +394,10 @@ Dim CutOff As Integer
     End Select
 End Function
 Private Function F_StripFileName(ByVal Nm As String)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: retruns file name of a full formed path by looking for the last \ character. If a \ character is not found it is
+'it returns the same string passed in.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim CutOff As Integer
     'reverse string
     Nm = StrReverse(Nm)
@@ -337,6 +414,9 @@ Dim CutOff As Integer
     End Select
 End Function
 Private Function F_GetFileName(NmType As Nm)
+'--------------------------------------------------------------------------------------------------------------------------
+'PURPOSE: returns the name of the project based on if access or excel is being used. note this is not the full formed path.
+'--------------------------------------------------------------------------------------------------------------------------
 Dim Proj As Object
     'exit if the app object has yet to be set
     If AppObj Is Nothing Then

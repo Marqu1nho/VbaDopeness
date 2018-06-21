@@ -2,13 +2,16 @@ Attribute VB_Name = "StandardMod"
 Option Compare Database
 Option Explicit
 Sub test()
-Dim Obj As New DopeVersionCtrl
-Dim Git As New DopeVBIDE
-    S_UpdateGit
-    Obj.CheckVersion
-        
+Dim Vctrl As New DopeVersionCtrl
+    With Vctrl
+        Debug.Print .CurrVersion
+        Debug.Print .CurrVersion(FullNm)
+        Debug.Print .CurrVersion(Icon)
+    End With
+    
+    
+    
 End Sub
-
 Public Function F_ProjName()
 Dim Vctrl As New DopeVersionCtrl
     F_ProjName = Vctrl.ProjName
