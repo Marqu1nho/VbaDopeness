@@ -20,7 +20,12 @@ Private Enum App
     Otl
     Wrd
 End Enum
-Public Enum Vnum
+Private Enum CurrVrsn
+    NumOnly
+    FullNm
+    Icon
+End Enum
+Public Enum VNum
     AsString
     AsInteger
     AsDouble
@@ -29,7 +34,17 @@ Public Enum ProjDir
     ProjPath
     IconPath
 End Enum
-
+Private Function F_ToolRepo(Optional WithProjName As Boolean = True)
+Dim ErrMsg As String
+Dim Arr As New DopeArray
+    'add first set of items to array object
+    Arr.AddNew Array(Environ("userprofile"), "Tesla", "Finops Billing - Tool Version Repository")
+    'add project name if necessary
+    If WithProjName Then Arr.AddNew Me.ProjName
+    'return joined string
+    F_ToolRepo = Arr.JoinedVals("\")
+    
+End Function
 Private Sub Class_Initialize()
     Set AppObj = Application
 End Sub
@@ -48,9 +63,15 @@ Dim Nm As String
     ProjName = Nm
 End Property
 Public Property Get ProjVersion()
-    ProjVersion = F_GetFileName(ProjNm)
+Dim Nm As String
+    'capture full file name
+    Nm = F_GetFileName(ProjNm)
+    'remove extension
+    Nm = Replace(Nm, F_GetFileExt(Nm), vbNullString)
+    'return version name
+    ProjVersion = Nm
 End Property
-Public Property Get ProjVersionNum(Optional Vtype As Vnum = Vnum.AsString)
+Public Property Get ProjVersionNum(Optional Vtype As VNum = VNum.AsDouble)
 Dim CutOff As Integer
 Dim Nm As Variant
     'capture file name
@@ -68,16 +89,24 @@ Dim Nm As Variant
     Nm = StrReverse(Left(Nm, CutOff))
     'convert value per the vtype passed in
     Select Case Vtype
-        Case Vnum.AsDouble
+        Case VNum.AsDouble
             Nm = CDbl(Nm)
-        Case Vnum.AsInteger
+        Case VNum.AsInteger
             Nm = CInt(Nm)
-        Case Vnum.AsString
+        Case VNum.AsString
             Nm = CStr(Nm)
     End Select
     'return value
     ProjVersionNum = Nm
 End Property
+Public Sub OpenProjPath()
+Dim FlSys As New DopeFileSystem
+    FlSys.NewFileWndw Me.ProjPaths
+End Sub
+Public Sub OpenRepoPath()
+Dim FlSys As New DopeFileSystem
+    FlSys.NewFileWndw F_ToolRepo
+End Sub
 Public Property Get ProjExtension()
 Dim Nm As String
     'return extension piece of project name
@@ -94,6 +123,51 @@ Dim FSO As New Scripting.FileSystemObject
         If Not FSO.FolderExists(Itm) Then FSO.CreateFolder Itm
     Next Itm
 End Sub
+Private Sub S_AddShortcutToDesktop(ByVal Path As String, ByVal Icon As String)
+Dim FlSys As New DopeFileSystem
+Dim Dsktp As String
+Dim Flnm As String
+Dim ShrCt As IWshRuntimeLibrary.WshShortcut
+Dim Shll As New IWshRuntimeLibrary.WshShell
+Dim FSO As New Scripting.FileSystemObject
+Dim Fldr As Scripting.Folder
+Dim Fl As Scripting.File
+Dim Msg As String
+Dim Prj As String
+Const IcnFldr As String = "\Desktop\Billing Ops Tools\"
+    'capture desktop path
+    Dsktp = Environ("userprofile") & IcnFldr
+    'create it if it doesn't already exists
+    FlSys.NewFolder Dsktp
+    'capture desktop path and project name
+    Prj = Me.ProjName
+    Set Fldr = FSO.GetFolder(Dsktp)
+    'loop through shortcuts on billing ops tools folders and get rid of any for this project
+    For Each Fl In Fldr.Files
+        If Fl.Name Like Prj & "*.lnk" Then Kill Fl
+    Next Fl
+    'capture path file name
+    Flnm = FlSys.GetFileName(Path)
+    'replace extension with .lnk extension
+    Flnm = Replace(Flnm, FlSys.GetFileExt(Flnm), ".lnk")
+    Flnm = Dsktp & Flnm
+    Set ShrCt = Shll.CreateShortcut(Flnm)
+    'create shortcut
+    With ShrCt
+        .TargetPath = Path
+        .WindowStyle = vbNormalFocus
+        .Description = "Shortcut to " & Path
+        .WorkingDirectory = Environ("userprofile")
+        .IconLocation = Icon
+        .Save
+    End With
+    'notify user
+    Msg = "Version " & CurrVersion(NumOnly) & " of the " & Me.ProjName & _
+          " tool is now in the ""Billing Ops Tools"" folder on your desktop."
+    MsgBox Msg, vbInformation + vbSystemModal, Me.ProjName
+    'open billing tools folder
+    FlSys.NewFileWndw Dsktp
+End Sub
 Public Property Get ProjPaths(Optional Path As ProjDir = ProjDir.ProjPath)
     'make sure directories are created
     Me.SetProjLocalFiles
@@ -101,25 +175,109 @@ Public Property Get ProjPaths(Optional Path As ProjDir = ProjDir.ProjPath)
     ProjPaths = F_ProjPath(Path)
 End Property
 Public Sub ReinstallCurrent()
-    Debug.Print "Coming soon - need to figure out where we'll keep the version files."
-    'see what correct version is
     
+    'see what correct version is
+    Call S_DownloadNewest
     'download it again
     
     'quit
 End Sub
+Public Property Get IsBeta()
+    IsBeta = DLookup("State", "S_ThisTool", "[Version Num]=" & Me.ProjVersionNum) = "BETA"
+End Property
+Private Property Get CurrVersion(Optional Typ As CurrVrsn = CurrVrsn.NumOnly)
+Dim Arr As New DopeArray
+Dim VNum As Variant
+Dim Ext As String
+    VNum = Nz(DMax("[Version Num]", "S_ThisTool", "STATE='PROD'"), -1)
+    Ext = Nz(DLookup("[File Extension]", "S_ThisTool", "[Version Num]=" & VNum))
+    Select Case Typ
+        Case CurrVrsn.NumOnly
+            'nothing - value is just returned at end of property
+        Case CurrVrsn.FullNm
+            'adjust for full intergers so the string will match
+            If Len(VNum) = 1 Then VNum = VNum & ".0"
+            Arr.AddNew Array(F_ToolRepo(True), Me.ProjName & " v" & VNum & Ext)
+            VNum = Arr.JoinedVals("\")
+        Case CurrVrsn.Icon
+            Arr.AddNew Array(F_ToolRepo(True), Me.ProjName & ".ico")
+            VNum = Arr.JoinedVals("\")
+    End Select
+    'return value
+    CurrVersion = VNum
+End Property
+
 Public Sub CheckVersion()
-    Debug.Print "Coming soon - need to figure out where we'll keep the version list."
-    's_downloadnewest get called from here
+Dim IsBeta As Boolean
+Dim Msg As Variant
+Dim CurrV As Double
+Dim MyV As Double
+Const NoProdVrs As Integer = -1
+    'exit if in beta mode
+    If Me.IsBeta Then
+        Msg = Me.ProjVersion & " is set to BETA state in the version control list and is not being reviewed." & DblNl & _
+                 "Only tools in PROD state get version controlled - contact Billing Ops management for assistance."
+        MsgBox Msg, vbSystemModal + vbExclamation, Me.ProjName
+        Exit Sub
+    End If
+    'capture my version
+    MyV = Me.ProjVersionNum
+    'capture currversion
+    CurrV = CurrVersion
+    'if there is not a valid prod version currversion returns a -1
+    If CurrV = NoProdVrs Then
+        Msg = "There is not a PROD version of this tool in the control list." & DblNl & "Please review with BillOps Management."
+        MsgBox Msg, vbSystemModal + vbCritical, Me.ProjName
+        Application.Quit
+    End If
+    'test to see if this version is the current version
+    Select Case MyV = CurrV
+        Case False
+            'advise user newest version will be captured
+            Msg = "You are not using the current version (" & CurrVersion(NumOnly) & "). " & DblNl & _
+                  "Press OK to download newest or CANCEL to close."
+            Msg = MsgBox(Msg, vbOKCancel + vbSystemModal + vbDefaultButton1 + vbExclamation, Me.ProjVersion)
+            Select Case Msg
+                Case vbOK
+                    'grab newest version
+                    Call S_DownloadNewest
+                    Application.Quit
+                Case vbCancel
+                    Application.Quit
+            End Select
+        Case True
+            'revert with positive message and exit
+            MsgBox "You are using the current version of this tool - have fun!", vbInformation + vbSystemModal, Me.ProjName
+    End Select
+    
+    
 End Sub
 Private Sub S_DownloadNewest()
-    Debug.Print "Coming soon - need to figure out where we'll keep the version files."
+Dim RepoFile As Variant
+Dim FlSys As New DopeFileSystem
+Dim FromPath As String
+Dim ToPath As String
+Dim IcoFile As String
+    'capture paths
+    FromPath = CurrVersion(FullNm)
+    ToPath = Me.ProjPaths(ProjPath) & FlSys.GetFileName(FromPath)
+    IcoFile = Me.ProjPaths(IconPath) & Me.ProjName & ".ico"
+    'copy file from repo to app data folder
+    FlSys.CopyFile CurrVersion(FullNm), Me.ProjPaths(ProjPath), True
+    'copy icon file from repo to app data icon folder
+    FlSys.CopyFile CurrVersion(Icon), Me.ProjPaths(IconPath), True
+    'add shortcut to desktop
+    Call S_AddShortcutToDesktop(ToPath, IcoFile)
+    
+    
+
+    
 End Sub
 Private Function F_ProjPath(Typ As ProjDir)
 Dim Proj As String
 Dim Ico As String
     'set project path
-    Proj = Environ("appdata") & "\App-" & Me.ProjName & "\"
+    Proj = Environ("appdata") & "\BillingTools-" & Me.ProjName & "\"
     'set icon path
     Ico = Proj & "ProjIcon\"
     Select Case Typ

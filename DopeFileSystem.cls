@@ -13,7 +13,7 @@ Public Enum FlDialog
     FldrPicker = msoFileDialogFolderPicker
     FilesPicker = msoFileDialogFilePicker
 End Enum
-Public Function NewFolder(Path As String, Optional OpenFldr As Boolean = True)
+Public Function NewFolder(Path As String, Optional OpenFldr As Boolean = False)
 Dim FSO As New Scripting.FileSystemObject
 Dim ParentFld As String
 Dim ErrMsg As String
