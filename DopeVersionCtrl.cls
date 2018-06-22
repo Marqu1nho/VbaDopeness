@@ -14,6 +14,7 @@ Private Const DblNl As String = vbNewLine & vbNewLine
 Private Const TblNm As String = "Tool Version Control"
 Private Const QryNm As String = "S_ThisTool"
 Private Const ToolPrefix As String = "\BillingTools-"
+Private Const ToolInstQA As String = "https://teslamotorsinc.sharepoint.com/sites/FinopsBilling/SitePages/Tool-Installer.aspx"
 Public Enum Nm
     ProjNm
     PathNm
@@ -248,8 +249,20 @@ Private Function F_ToolRepo(Optional WithProjName As Boolean = True)
 '--------------------------------------------------------------------------------------------------------------------------
 Dim ErrMsg As String
 Dim Arr As New DopeArray
+Dim Msg As String
+Dim FSO As New Scripting.FileSystemObject
+Const ChrmPath As String = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+
     'add first set of items to array object
     Arr.AddNew Array(Environ("userprofile"), "Tesla", "Finops Billing - Tool Version Repository")
+    'assure path exists
+    If Not FSO.FolderExists(Arr.JoinedVals("\")) Then
+        Msg = "Looks like you need to sync to the tool files first." & DblNl & _
+              "Press OK for instructions to sync the FinOps OneDrive." & DblNl & _
+              "This app will close once you press OK."
+        VBA.Shell ChrmPath & " -url " & ToolInstQA
+        Application.Quit
+    End If
     'add project name if necessary
     If WithProjName Then Arr.AddNew Me.ProjName
     'return joined string

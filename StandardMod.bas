@@ -2,13 +2,13 @@ Attribute VB_Name = "StandardMod"
 Option Compare Database
 Option Explicit
 Sub test()
-Dim Vctrl As New DopeVersionCtrl
-    With Vctrl
-        Debug.Print .CurrVersion
-        Debug.Print .CurrVersion(FullNm)
-        Debug.Print .CurrVersion(Icon)
-    End With
+'Dim Arr As New DopeArray
+'    Arr.AddNew Split(Environ("path"), ";")
     
+    
+    
+Dim Vchk As New DopeVersionCtrl
+    Vchk.OpenRepoPath
     
     
 End Sub
