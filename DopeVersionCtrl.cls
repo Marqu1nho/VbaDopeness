@@ -260,6 +260,7 @@ Const ChrmPath As String = "C:\Program Files (x86)\Google\Chrome\Application\chr
         Msg = "Looks like you need to sync to the tool files first." & DblNl & _
               "Press OK for instructions to sync the FinOps OneDrive." & DblNl & _
               "This app will close once you press OK."
+        MsgBox Msg, vbSystemModal + vbExclamation, Me.ProjName
         VBA.Shell ChrmPath & " -url " & ToolInstQA
         Application.Quit
     End If
@@ -283,7 +284,7 @@ Public Property Get IsBeta()
 '--------------------------------------------------------------------------------------------------------------------------
 'PURPOSE: Retruns TRUE/FALSE if the state for the version being used is set to BETA or PROD in the version control list.
 '--------------------------------------------------------------------------------------------------------------------------
-    IsBeta = DLookup("State", QryNm, "[Version Num]=" & Me.ProjVersionNum) = "BETA"
+    IsBeta = DLookup("State", QryNm, "[Version Num]=" & Me.ProjVersionNum & " AND [File Extension]='" & Me.ProjExtension & "'") = "BETA"
 End Property
 Public Property Get CurrVersion(Optional Typ As CurrVrsn = CurrVrsn.NumOnly)
 '--------------------------------------------------------------------------------------------------------------------------

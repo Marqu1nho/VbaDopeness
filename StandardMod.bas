@@ -1,21 +1,26 @@
 Attribute VB_Name = "StandardMod"
 Option Compare Database
 Option Explicit
+Public Enum RibbTogg
+    ShowIt
+    HideIt
+End Enum
 Sub test()
-'Dim Arr As New DopeArray
-'    Arr.AddNew Split(Environ("path"), ";")
-    
-    
-    
-Dim Vchk As New DopeVersionCtrl
-    Vchk.OpenRepoPath
-    
-    
+Dim vCtrl As New DopeVersionCtrl
+    vCtrl.OpenRepoPath
 End Sub
 Public Function F_ProjName()
-Dim Vctrl As New DopeVersionCtrl
-    F_ProjName = Vctrl.ProjName
+Dim vCtrl As New DopeVersionCtrl
+    F_ProjName = vCtrl.ProjName
 End Function
+Public Sub S_ToggleRibbon(Direction As RibbTogg)
+    Select Case Direction
+        Case RibbTogg.HideIt
+            DoCmd.ShowToolbar "Ribbon", acToolbarNo
+        Case RibbTogg.ShowIt
+            DoCmd.ShowToolbar "Ribbon", acToolbarYes
+    End Select
+End Sub
 Public Sub S_UpdateGit()
 Dim Git As New DopeVBIDE
     With Git
