@@ -31,7 +31,7 @@ Property Get JoinedVals(Optional JoinChar As String = " ")
     End If
     JoinedVals = Join(Arr, JoinChar)
 End Property
-Property Get ArrayVals(Optional Index As Integer)
+Property Get ArrayVals(Optional Index As Integer = -1)
 '-------------------------------------------------------------
 'PURPOSE: return a joined string from array values
 '-------------------------------------------------------------
@@ -41,7 +41,7 @@ Dim OutOfScope As Boolean
         ArrayVals = Null
         Exit Property
     End If
-    Select Case IsMissing(Index)
+    Select Case Index = -1
         Case True
             'return all items
             ArrayVals = Arr

@@ -13,7 +13,7 @@ Public Enum FlDialog
     FldrPicker = msoFileDialogFolderPicker
     FilesPicker = msoFileDialogFilePicker
 End Enum
-Public Function NewFolder(Path As String, Optional OpenFldr As Boolean = False)
+Public Function NewFolder(Path As Variant, Optional OpenFldr As Boolean = False)
 Dim FSO As New Scripting.FileSystemObject
 Dim ParentFld As String
 Dim ErrMsg As String
@@ -32,7 +32,7 @@ Dim ErrMsg As String
     End If
     If OpenFldr Then Me.NewFileWndw Path
 End Function
-Public Sub NewFileWndw(Path As String)
+Public Sub NewFileWndw(Path As Variant)
 Dim FSO As New Scripting.FileSystemObject
     If Not FSO.FolderExists(Path) Then
         Err.Raise vbObjectError, "DopeFileSystem.NewFileWndw", "Bad path."
@@ -64,6 +64,8 @@ Dim ErrMsg As String
         ErrMsg = "FromPath file doesn't exist."
         Err.Raise vbObjectError, "DopeFileSystem.CopyFile", ErrMsg
     End If
+    'fix to path
+    If Not ToPath Like "*\" Then ToPath = ToPath & "\"
     'move file
     FSO.CopyFile FromPath, ToPath, overwritefiles:=ReplaceTo
 End Sub
