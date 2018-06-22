@@ -7,7 +7,7 @@ Public Enum RibbTogg
 End Enum
 Sub test()
 Dim vCtrl As New DopeVersionCtrl
-    vCtrl.OpenRepoPath
+    vCtrl.InstallNew "Tool Installer"
 End Sub
 Public Function F_ProjName()
 Dim vCtrl As New DopeVersionCtrl

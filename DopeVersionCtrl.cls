@@ -119,7 +119,7 @@ Dim Fldr As Variant
     'get newest version uversion list
     ToolVers = DMax("[Version Num]", TblNm, "[Tool Name]='" & ToolName & "' and STATE='PROD'")
     'get extension for this version
-    ToolExt = DLookup("[File Extension]", TblNm, "[Tool Name]='" & ToolName & "' and [Version Num]=" & ToolVers)
+    ToolExt = DLookup("[File Extension]", TblNm, "[Tool Name]='" & ToolName & "' and [Version Num]=" & ToolVers & " AND STATE='PROD'")
     'adjust for single integer versions
     If Len(ToolVers) = 1 Then ToolVers = ToolVers & ".0"
     'combine the full version
