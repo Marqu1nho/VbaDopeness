@@ -17,10 +17,15 @@ Public Function NewFolder(Path As Variant, Optional OpenFldr As Boolean = False)
 Dim FSO As New Scripting.FileSystemObject
 Dim ParentFld As String
 Dim ErrMsg As String
-        
+Dim CutOff As String
+    'remove last backslash if necessary
+    If Path Like "*\" Then Path = Left(Path, Len(Path) - 1)
+    'test if folder exists
     If Not FSO.FolderExists(Path) Then
         'extract parent folder
-        ParentFld = Replace(Path, Me.GetFileName(Path), vbNullString)
+        ParentFld = StrReverse(Path)
+        CutOff = InStr(ParentFld, "\")
+        ParentFld = Left(StrReverse(ParentFld), Len(ParentFld) - CutOff)
         'only create final folder if parent folder exists
         Select Case FSO.FolderExists(ParentFld)
             Case True

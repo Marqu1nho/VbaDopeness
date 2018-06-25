@@ -117,6 +117,11 @@ Dim FlSys As New DopeFileSystem
 Dim ToolArr As New DopeArray
 Dim IconArr As New DopeArray
 Dim Fldr As Variant
+Dim GnrlFldr As Scripting.Folder
+Dim Fl As Scripting.File
+Dim FldrStr As String
+Dim InstExists As Boolean
+Dim FSO As New Scripting.FileSystemObject
     'get newest version uversion list
     ToolVers = DMax("[Version Num]", TblNm, "[Tool Name]='" & ToolName & "' and STATE='PROD'")
     'get extension for this version
@@ -143,7 +148,22 @@ Dim Fldr As Variant
     FlSys.CopyFile IconPath, ToolArr.ArrayVals(1), True
     'add shortcut
     Call S_AddShortcutToDesktop(ToolArr.ArrayVals(0) & "\" & ToolVers, ToolArr.ArrayVals(1) & "\" & ToolName & ".ico", ToolName)
-    'close
+    'capture folder for where tool installer should be
+    FldrStr = Environ("userprofile") & "\Desktop\Billing Ops Tools\General"
+    'create it if necessary
+    FlSys.NewFolder FldrStr
+    'capture folder object
+    Set GnrlFldr = FSO.GetFolder(FldrStr)
+    'loop to determine if tool installer shortcut exists
+    For Each Fl In GnrlFldr.Files
+        If Fl.Name Like "Tool Installer v*lnk" Then
+            InstExists = True
+            Exit For
+        End If
+    Next Fl
+    'install tool installer if necessary
+    If Not InstExists Then Call InstallNew("Tool Installer")
+
 End Sub
 Public Property Get ProjName()
 '--------------------------------------------------------------------------------------------------------------------------
@@ -372,6 +392,7 @@ Dim SubFldrStr As String
     Arr.AddNew Array(Dsktp, Dsktp & SubFldrStr & "\")
     'test each folder in array and create if necessary
     For Each Itm In Arr.ArrayVals
+        Debug.Print Itm
         FlSys.NewFolder Itm
     Next Itm
     'store path with subfolder to dsktp var
@@ -415,9 +436,14 @@ Dim SubFldrStr As String
                   """Billing Ops Tools"" folder on your desktop with below name:" & DblNl & _
                   F_StripFileName(Path)
         Case False
-            Msg = "The latest version of the " & InstallNm & " tool is now on your " & _
-                  """Billing Ops Tools"" folder on your desktop with below name:" & DblNl & _
-                  F_StripFileName(Path)
+            Select Case InstallNm
+                Case True
+                    Msg = "This tool installer has also been added to your desktop for convenience."
+                Case Else
+                    Msg = "The latest version of the " & InstallNm & " tool is now on your " & _
+                          """Billing Ops Tools"" folder on your desktop with below name:" & DblNl & _
+                          F_StripFileName(Path)
+            End Select
     End Select
     MsgBox Msg, vbInformation + vbSystemModal, Me.ProjName
     'open billing tools folder

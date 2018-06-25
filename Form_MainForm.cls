@@ -33,6 +33,8 @@ Private Sub Form_Load()
     Call sP_ToggleRibbon
     'assure this is correct version
     vCtrl.CheckVersion
+    'set form name
+    Me.Caption = vCtrl.ProjVersion
     'refresh list
     Call pS_PrepList
 End Sub
