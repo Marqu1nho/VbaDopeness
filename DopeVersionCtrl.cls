@@ -29,6 +29,7 @@ Public Enum CurrVrsn
     NumOnly
     FullNm
     Icon
+    SubFldr
 End Enum
 Public Enum VNum
     AsString
@@ -295,8 +296,10 @@ Public Property Get CurrVersion(Optional Typ As CurrVrsn = CurrVrsn.NumOnly)
 Dim Arr As New DopeArray
 Dim VNum As Variant
 Dim Ext As String
+Dim SubFldr As String
     VNum = Nz(DMax("[Version Num]", QryNm, "STATE='PROD'"), -1)
     Ext = Nz(DLookup("[File Extension]", QryNm, "[Version Num]=" & VNum))
+    SubFldr = Nz(DLookup("SubFolder", QryNm, "[Version Num]=" & VNum))
     Select Case Typ
         Case CurrVrsn.NumOnly
             'nothing - value is just returned at end of property
@@ -308,6 +311,9 @@ Dim Ext As String
         Case CurrVrsn.Icon
             Arr.AddNew Array(F_ToolRepo(True), Me.ProjName & ".ico")
             VNum = Arr.JoinedVals("\")
+        Case CurrVrsn.SubFldr
+            CurrVersion = SubFldr
+            Exit Property
     End Select
     'return value
     CurrVersion = VNum
@@ -344,6 +350,8 @@ Private Sub S_AddShortcutToDesktop(ByVal Path As String, ByVal Icon As String, O
 'it update to all the users icons.
 '--------------------------------------------------------------------------------------------------------------------------
 Dim FlSys As New DopeFileSystem
+Dim Arr As New DopeArray
+Dim Itm As Variant
 Dim Dsktp As String
 Dim Flnm As String
 Dim ShrCt As IWshRuntimeLibrary.WshShortcut
@@ -354,10 +362,20 @@ Dim Fl As Scripting.File
 Dim Msg As String
 Dim Prj As String
 Const IcnFldr As String = "\Desktop\Billing Ops Tools\"
+Dim SubFldrStr As String
+
     'capture desktop path
     Dsktp = Environ("userprofile") & IcnFldr
-    'create it if it doesn't already exists
-    FlSys.NewFolder Dsktp
+    'capture subfolder
+    SubFldrStr = CurrVersion(SubFldr)
+    'add folders to test to array
+    Arr.AddNew Array(Dsktp, Dsktp & SubFldrStr & "\")
+    'test each folder in array and create if necessary
+    For Each Itm In Arr.ArrayVals
+        FlSys.NewFolder Itm
+    Next Itm
+    'store path with subfolder to dsktp var
+    Dsktp = Arr.ArrayVals(1)
     'capture desktop path and project name
     Select Case IsNull(InstallNm)
         Case True
@@ -366,9 +384,14 @@ Const IcnFldr As String = "\Desktop\Billing Ops Tools\"
             Prj = InstallNm
     End Select
     Set Fldr = FSO.GetFolder(Dsktp)
-    'loop through shortcuts on billing ops tools folders and get rid of any for this project
+    'loop through shortcuts on billing ops tools/subfolder to clear previous version shortcuts
     For Each Fl In Fldr.Files
         If Fl.Name Like Prj & "*.lnk" Then Kill Fl
+    Next Fl
+    'loop through main billing ops tools folder to get rid of shortcuts there
+    Set Fldr = FSO.GetFolder(Arr.ArrayVals(0))
+    For Each Fl In Fldr.Files
+        If Fl.Name Like "*.lnk" Then Kill Fl
     Next Fl
     'capture path file name
     Flnm = FlSys.GetFileName(Path)
