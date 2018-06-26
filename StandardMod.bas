@@ -6,8 +6,11 @@ Public Enum RibbTogg
     HideIt
 End Enum
 Sub test()
-Dim vCtrl As New DopeVersionCtrl
-    vCtrl.InstallNew "Tool Installer"
+Dim Git As New DopeVBIDE
+
+    
+    Git.RemoveNonVBIDEClasses
+
 End Sub
 Public Function F_ProjName()
 Dim vCtrl As New DopeVersionCtrl

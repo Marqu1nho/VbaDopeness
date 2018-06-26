@@ -13,6 +13,7 @@ Option Explicit
 Private Proj As VBIDE.VBProject
 Private Compnts As VBIDE.VBComponents
 Private CdMd As VBIDE.CodeModule
+Private Const pMeName As String = "DopeVBIDE"
 Public Sub ExportGitFldr(Typ As vbext_ComponentType)
 Dim Comp As VBIDE.VBComponent
 Static Path As String
@@ -60,9 +61,6 @@ Static Path As String
         If Fl.Name Like "DopeVBIDE*" Then GoTo NextFl
         'capture name w/ extension
         Nm = Fl.Name
-        Debug.Print Nm
-        'remove extensions
-        Nm = Replace(Nm, FlSys.GetFileExt(Nm), vbNullString)
         'loop through to see if we already have that class in
         For Each Comp In Proj.VBComponents
             If Nm = Comp.Name Then
@@ -79,6 +77,21 @@ NextFl:
     Next Fl
     
 
+End Sub
+Public Sub RemoveNonVBIDEClasses()
+Dim Comp As VBIDE.VBComponent
+Dim Typ As VBIDE.vbext_ComponentType
+    For Each Comp In Compnts
+        Select Case True
+            Case Not Comp.Type = vbext_ct_ClassModule
+                Debug.Print "NOT CLASS", Comp.Name
+            Case Comp.Type = vbext_ct_ClassModule
+                If Comp.Name = pMeName Then GoTo NextComp
+                Debug.Print "IS CLASS", Comp.Name
+                Call S_RemoveComponent(Comp)
+        End Select
+NextComp:
+    Next Comp
 End Sub
 Private Sub S_RemoveComponent(Comp As VBComponent)
     Proj.VBComponents.Remove Comp
